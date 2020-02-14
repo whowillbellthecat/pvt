@@ -30,7 +30,7 @@ struct stats {
 static long	show_timer();
 static int	handle_commission_errors();
 static void	print_stats(struct stats);
-static void	write_stats_to_file(int, const struct stats, const time_t);
+static void	write_stats_to_file(int, const struct stats, const time_t *);
 static struct stats	populate_stats(struct event *, int, int, int);
 static struct event	check_react(const struct timespec *);
 static struct timespec	get_interval(int, int);
@@ -170,7 +170,7 @@ main(int argc, char **argv)
 	const char *emsg;
 	struct event events[EVENT_MAX] = {0};
 	struct stats stats;
-	struct timespec start, cur;
+	struct timespec start, cur, interval;
 	struct timeval time_of_day;
 	char *output_file = NULL;
 	char *usage = "pvt [-vd] [-l lapse-threshold] [-d duration] [[file] ...]";
@@ -229,9 +229,11 @@ main(int argc, char **argv)
 	mvprintw(LINES/2, COLS/2 - 3, "Wait...");
 	refresh();
 
+	interval = get_interval(min, interval_range);
+
 	clock_gettime(CLOCK_MONOTONIC, &start);
 	for(i=0, cur = start; cur.tv_sec - start.tv_sec < testlen; i++, clock_gettime(CLOCK_MONOTONIC, &cur))
-		events[i]=check_react(&get_interval(min,interval_range));
+		events[i]=check_react(&interval);
 
 	
 	clear();
