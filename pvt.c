@@ -1,3 +1,5 @@
+#include <sys/stat.h>
+
 #include <curses.h>
 #include <err.h>
 #include <fcntl.h>
@@ -6,7 +8,6 @@
 #include <term.h>
 #include <time.h>
 #include <signal.h>
-#include <sys/stat.h>
 #include <stdlib.h>
 #include <unistd.h>
 
