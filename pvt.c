@@ -27,7 +27,7 @@ struct stats {
 	int	stimuli_count;		/* Total count of stimuli shown */
 };
 
-long
+static long
 show_timer()
 {
 	int ready = 0, delta = 0;
@@ -50,7 +50,7 @@ show_timer()
 	return 0;
 }
 
-int
+static int
 handle_commission_errors()
 {
 	int ready = 0, count = 0;
@@ -69,12 +69,12 @@ handle_commission_errors()
 }
 			
 
-struct event
-check_react(const struct timespec t)
+static struct event
+check_react(const struct timespec *t)
 {
 	struct timespec ts1, ts2;
 	struct event e;
-	nanosleep(&t, NULL);
+	nanosleep(t, NULL);
 	e.commission_err_count += handle_commission_errors();
 
 	bkgd(COLOR_PAIR(1));
@@ -91,14 +91,16 @@ check_react(const struct timespec t)
 	return e;
 }
 
-struct timespec get_interval(int min, int range) {
+static struct timespec
+get_interval(int min, int range)
+{
 	struct timespec t;
 	t.tv_sec = min+(rand()/(RAND_MAX/range));
 	t.tv_nsec = 0;
 	return t;
 }
 
-void
+static void
 print_stats(struct stats s)
 {
 	printw("Test length:                %d seconds\n", s.testlen);
@@ -108,7 +110,7 @@ print_stats(struct stats s)
 	printw("Total stimulus count:       %d\n", s.stimuli_count);
 }
 
-struct stats
+static struct stats
 populate_stats(struct event *events, int size, int lapse_threshold, int testlen)
 {
 	int i, d;
@@ -121,13 +123,13 @@ populate_stats(struct event *events, int size, int lapse_threshold, int testlen)
 			s.false_starts++;
 		s.commission_err_count += events[i].commission_err_count;
 	}
-	s.stimulus_count = i;
+	s.stimuli_count = i;
 	s.lapse_threshold = lapse_threshold;
 	s.testlen = testlen;
 	return s;
 }
 
-void
+static void
 write_stats_to_file(int fd, const struct stats s, const time_t *start_time)
 { 
 	struct tm *t;
@@ -221,7 +223,7 @@ main(int argc, char **argv)
 
 	clock_gettime(CLOCK_MONOTONIC, &start);
 	for(i=0, cur = start; cur.tv_sec - start.tv_sec < testlen; i++, clock_gettime(CLOCK_MONOTONIC, &cur))
-		events[i]=check_react(get_interval(min,interval_range));
+		events[i]=check_react(&get_interval(min,interval_range));
 
 	
 	clear();
