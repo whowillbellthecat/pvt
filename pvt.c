@@ -27,6 +27,14 @@ struct stats {
 	int	stimuli_count;		/* Total count of stimuli shown */
 };
 
+static long	show_timer();
+static int	handle_commission_errors();
+static void	print_stats(struct stats);
+static void	write_stats_to_file(int, const struct stats, const time_t);
+static struct stats	populate_stats(struct event *, int, int, int);
+static struct event	check_react(const struct timespec *);
+static struct timespec	get_interval(int, int);
+
 static long
 show_timer()
 {
