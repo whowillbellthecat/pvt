@@ -13,18 +13,18 @@
 #define EVENT_MAX 2048
 
 struct event {
-	struct timespec stimulus;
-	struct timespec rt;
-	int commission_err_count;
+	struct	timespec stimulus;
+	struct	timespec rt;
+	int	commission_err_count;
 };
 
 struct stats {
-	int testlen;
-	int commission_err_count;
-	int lapses;
-	int lapse_threshold;
-	int false_starts;
-	int stimulus_count;
+	int	testlen;		/* Length of test in seconds */
+	int	commission_err_count;	/* Count of exteraneous key presses */
+	int	lapses;			/* Count of response times greater than lapse_threshold */
+	int	lapse_threshold;	/* Time in milliseconds before responses considered lapses */
+	int	false_starts;		/* Count of responses faster than 100ms */
+	int	stimuli_count;		/* Total count of stimuli shown */
 };
 
 long
@@ -105,7 +105,7 @@ print_stats(struct stats s)
 	printw("Errors of commission:       %d\n", s.commission_err_count);
 	printw("Lapses       (rt > %d ms): %d\n", s.lapse_threshold, s.lapses);
 	printw("False starts (rt < 100 ms): %d\n", s.false_starts);
-	printw("Total stimulus count:       %d\n", s.stimulus_count);
+	printw("Total stimulus count:       %d\n", s.stimuli_count);
 }
 
 struct stats
@@ -145,7 +145,7 @@ write_stats_to_file(int fd, const struct stats s, const time_t *start_time)
 	
 	ret = snprintf(record, 128, "%s,%d,%d,%d,%d,%d,%d\n", date, s.testlen, //check ret
 		s.commission_err_count, s.lapses, s.lapse_threshold, s.false_starts,
-		s.stimulus_count);
+		s.stimuli_count);
 	if (0 == ret || 128 <= ret)
 		err(1, "stats record too large (probably a bug)");
 	write(fd, record, ret);
