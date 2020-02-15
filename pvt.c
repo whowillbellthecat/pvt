@@ -169,19 +169,23 @@ write_stats_to_file(int fd, const struct stats s, const time_t *start_time)
 int
 main(int argc, char **argv)
 {
-	int false_starts = 0, lapses = 0, verbose = 0, i, d, ch;
-	int fd = 0;
+	int	i, d, ch; 	/* temporary variables */
+	int	verbose = 0;
+	int	fd = 0;
 	int	testlen 	= pvtb_testlen;
 	int	lapse_threshold = pvtb_lapse_threshold;
 	int	min		= pvtb_interval_lower;
 	int	interval_range	= pvtb_interval_upper - pvtb_interval_lower;
-	const char *emsg;
-	struct event events[EVENT_MAX] = {0};
-	struct stats stats;
-	struct timespec start, cur, interval;
-	struct timeval time_of_day;
-	char *output_file = NULL;
-	char *usage = "pvt [-vd] [-l lapse-threshold] [-d duration] [[file] ...]";
+
+	struct event	events[EVENT_MAX] = {0};
+	struct stats	stats;
+	struct timespec	start, cur, interval;
+	struct timeval	time_of_day;
+	const char	*emsg;
+
+	char	*output_file = NULL;
+	char	*usage = "pvt [-vd] [-l lapse-threshold] [-d duration] [[file] ...]";
+
 	srand(time(NULL));
 
 	while ((ch = getopt(argc, argv, "hvpd:l:")) != -1) {
@@ -240,8 +244,8 @@ main(int argc, char **argv)
 	interval = get_interval(min, interval_range);
 
 	clock_gettime(CLOCK_MONOTONIC, &start);
-	for(i=0, cur = start; cur.tv_sec - start.tv_sec < testlen; i++, clock_gettime(CLOCK_MONOTONIC, &cur))
-		events[i]=check_react(&interval);
+	for(i = 0, cur = start; cur.tv_sec - start.tv_sec < testlen; clock_gettime(CLOCK_MONOTONIC, &cur))
+		events[i++]=check_react(&interval);
 
 	
 	clear();
@@ -252,7 +256,7 @@ main(int argc, char **argv)
 		write_stats_to_file(fd, stats, &time_of_day.tv_sec);
 
 	if (verbose)
-		for(i=0; d = difftime(events[i].rt.tv_sec, events[i].stimulus.tv_sec),
+		for(i = 0; d = difftime(events[i].rt.tv_sec, events[i].stimulus.tv_sec),
 			i < EVENT_MAX && (events[i].stimulus.tv_nsec || d); i++)
 			printw("rt: %d ms\n", (d*1000) + (events[i].rt.tv_nsec/1000000));
 
