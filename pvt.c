@@ -39,6 +39,9 @@ const int	pvt_interval_upper = 10;	/* PVT stimulus interval upper bound (in seco
 
 static long	show_timer();
 static int	handle_commission_errors();
+static int	signum(const int);
+static int	is_empty(const int);
+static int	write_hdr(const int);
 static void	print_stats(struct stats);
 static void	write_stats_to_file(int, const struct stats, const time_t *);
 static struct stats	populate_stats(struct event *, int, int, int);
@@ -175,6 +178,34 @@ write_stats_to_file(int fd, const struct stats s, const time_t *start_time)
 	write(fd, record, ret);
 }
 
+static int
+write_hdr(const int fd)
+{
+	const char hdr[] = "date,testlen,commission_err_count,"
+	"lapses,lapse_threshold,false_starts,stimuli_count\n";
+
+	return write(fd, hdr, sizeof(hdr));
+}
+
+static int
+signum(const int x)
+{
+	return (x > 0) - (x < 0);
+
+}
+
+static int
+is_empty(const int fd)
+{
+	struct stat sb;
+
+	if(fstat(fd, &sb) == -1)
+		err(1, "fstat");
+
+	return !signum(sb.st_size);
+
+}
+
 int
 main(int argc, char **argv)
 {
@@ -261,8 +292,11 @@ main(int argc, char **argv)
 	stats = populate_stats(events, EVENT_MAX, lapse_threshold, testlen);
 	print_stats(stats);
 
-	if (fd)
+	if (fd) {
+		if (is_empty(fd))
+			write_hdr(fd);
 		write_stats_to_file(fd, stats, &time_of_day.tv_sec);
+	}
 
 	if (verbose)
 		for(i = 0; d = difftime(events[i].rt.tv_sec, events[i].stimulus.tv_sec),
