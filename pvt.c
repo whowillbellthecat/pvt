@@ -32,6 +32,10 @@ const int	pvtb_lapse_threshold = 355;	/* PVT-B lapse threshold (in milliseconds)
 const int	pvtb_testlen = 3*60;		/* PVT-B test length (in seconds) */
 const int	pvtb_interval_lower = 1;	/* PVT-B stimulus interval lower bound (in seconds) */
 const int	pvtb_interval_upper = 4;	/* PVT-B stimulus interval upper bound (in seconds) */
+const int	pvt_lapse_threshold = 500;	/* PVT lapse threshold (in milliseconds) */
+const int	pvt_testlen = 10*60;		/* PVT test length (in seconds) */
+const int	pvt_interval_lower = 2;		/* PVT stimulus interval lower bound (in seconds) */
+const int	pvt_interval_upper = 10;	/* PVT stimulus interval upper bound (in seconds) */
 
 static long	show_timer();
 static int	handle_commission_errors();
@@ -204,10 +208,10 @@ main(int argc, char **argv)
 				errx(1, "test duration %s", emsg);
 			break;
 		case 'p': /* Take PVT instead of PVT-B */
-			testlen = 10*60;
-			lapse_threshold = 500;
-			min = 2;
-			interval_range = 8;
+			testlen = pvt_testlen;
+			lapse_threshold = pvt_lapse_threshold;
+			min = pvt_interval_lower;
+			interval_range = pvt_interval_upper - pvt_interval_lower;
 			break;
 		default:
 			errx(1, "%s", usage);
