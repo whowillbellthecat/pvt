@@ -28,6 +28,11 @@ struct stats {
 	int	stimuli_count;		/* Total count of stimuli shown */
 };
 
+const int	pvtb_lapse_threshold = 355;	/* PVT-B lapse threshold (in milliseconds) */
+const int	pvtb_testlen = 3*60;		/* PVT-B test length (in seconds) */
+const int	pvtb_interval_lower = 1;	/* PVT-B stimulus interval lower bound (in seconds) */
+const int	pvtb_interval_upper = 4;	/* PVT-B stimulus interval upper bound (in seconds) */
+
 static long	show_timer();
 static int	handle_commission_errors();
 static void	print_stats(struct stats);
@@ -165,9 +170,12 @@ write_stats_to_file(int fd, const struct stats s, const time_t *start_time)
 int
 main(int argc, char **argv)
 {
-	int false_starts = 0, lapses = 0, verbose = 0;
-	int testlen = 3*60, i, d, fd = 0, ch, size = 20, min = 1, interval_range = 3;
-	int lapse_threshold = 355;
+	int false_starts = 0, lapses = 0, verbose = 0, i, d, ch;
+	int fd = 0;
+	int	testlen 	= pvtb_testlen;
+	int	lapse_threshold = pvtb_lapse_threshold;
+	int	min		= pvtb_interval_lower;
+	int	interval_range	= pvtb_interval_upper - pvtb_interval_lower;
 	const char *emsg;
 	struct event events[EVENT_MAX] = {0};
 	struct stats stats;
