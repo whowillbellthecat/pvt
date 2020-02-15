@@ -148,8 +148,7 @@ write_stats_to_file(int fd, const struct stats s, const time_t *start_time)
 { 
 	struct tm *t;
 	size_t ret;
-	t = localtime(start_time); // NULL on error
-	if (!t)
+	if (NULL == (t = localtime(start_time)))
 		err(1, "could not determine localtime");
 
 	char date_fmt[] = "%F %R %Z";
@@ -159,9 +158,9 @@ write_stats_to_file(int fd, const struct stats s, const time_t *start_time)
 	
 	char record[128]; // bound settings and calculate this using those bounds
 	
-	ret = snprintf(record, 128, "%s,%d,%d,%d,%d,%d,%d\n", date, s.testlen, //check ret
-		s.commission_err_count, s.lapses, s.lapse_threshold, s.false_starts,
-		s.stimuli_count);
+	ret = snprintf(record, 128, "%s,%d,%d,%d,%d,%d,%d\n", date, s.testlen,
+	    s.commission_err_count, s.lapses, s.lapse_threshold, s.false_starts,
+	    s.stimuli_count);
 	if (0 == ret || 128 <= ret)
 		err(1, "stats record too large (probably a bug)");
 	write(fd, record, ret);
