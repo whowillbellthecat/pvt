@@ -110,11 +110,16 @@ check_react(const struct timespec *t)
 }
 
 static struct timespec
-get_interval(int min, int range)
+get_interval(int lower, int upper)
 {
 	struct timespec t;
-	t.tv_sec = min+(rand()/(RAND_MAX/range));
+
+	if (lower >= upper)
+		errx(1, "cannot choose interval between %d and %d", lower, upper);
+
+	t.tv_sec = lower + (rand()/(RAND_MAX/(upper-lower)));
 	t.tv_nsec = 0;
+
 	return t;
 }
 
@@ -178,8 +183,8 @@ main(int argc, char **argv)
 	int	fd = 0;
 	int	testlen 	= pvtb_testlen;
 	int	lapse_threshold = pvtb_lapse_threshold;
-	int	min		= pvtb_interval_lower;
-	int	interval_range	= pvtb_interval_upper - pvtb_interval_lower;
+	int	interval_lower	= pvtb_interval_lower;
+	int	interval_upper	= pvtb_interval_upper;
 
 	struct event	events[EVENT_MAX] = {0};
 	struct stats	stats;
@@ -208,10 +213,10 @@ main(int argc, char **argv)
 				errx(1, "test duration %s", emsg);
 			break;
 		case 'p': /* Take PVT instead of PVT-B */
-			testlen = pvt_testlen;
-			lapse_threshold = pvt_lapse_threshold;
-			min = pvt_interval_lower;
-			interval_range = pvt_interval_upper - pvt_interval_lower;
+			testlen		= pvt_testlen;
+			lapse_threshold	= pvt_lapse_threshold;
+			interval_lower	= pvt_interval_lower;
+			interval_upper	= pvt_interval_upper;
 			break;
 		default:
 			errx(1, "%s", usage);
@@ -245,7 +250,7 @@ main(int argc, char **argv)
 	mvprintw(LINES/2, COLS/2 - 3, "Wait...");
 	refresh();
 
-	interval = get_interval(min, interval_range);
+	interval = get_interval(interval_lower, interval_upper);
 
 	clock_gettime(CLOCK_MONOTONIC, &start);
 	for(i = 0, cur = start; cur.tv_sec - start.tv_sec < testlen; clock_gettime(CLOCK_MONOTONIC, &cur))
