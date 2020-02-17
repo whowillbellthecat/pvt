@@ -98,11 +98,11 @@ check_react(const struct timespec *t)
 	nanosleep(t, NULL);
 	e.commission_err_count += handle_commission_errors();
 
-	bkgd(COLOR_PAIR(1));
+	bkgd(COLOR_PAIR(2));
 	clock_gettime(CLOCK_MONOTONIC, &ts1);
 	show_timer();
 	clock_gettime(CLOCK_MONOTONIC, &ts2);
-	bkgd(COLOR_PAIR(0));
+	bkgd(COLOR_PAIR(1));
 
 	clear();
 	mvprintw(LINES/2, COLS/2 - 3,"Wait...");
@@ -268,7 +268,8 @@ main(int argc, char **argv)
 	start_color();
 	cbreak();
 	noecho();
-	init_pair(1, COLOR_RED, COLOR_BLACK);
+	init_pair(1, COLOR_WHITE, COLOR_BLACK);
+	init_pair(2, COLOR_GREEN, COLOR_BLACK);
 
 #ifdef __OpenBSD__
 	if (unveil(NULL, NULL) != 0)
@@ -276,6 +277,8 @@ main(int argc, char **argv)
 	if (pledge("stdio tty", NULL) != 0)
 		err(1, NULL);
 #endif
+
+	bkgd(1);
 
 	clear();
 	mvprintw(LINES/2, COLS/2 - 3, "Wait...");
