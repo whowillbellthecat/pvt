@@ -1,6 +1,6 @@
 
 pvt: pvt.c
-	$(CC) -o pvt -lcurses $<
+	$(CC) -Wall -o pvt -lcurses $<
 
 clean:
 	rm -f pvt
