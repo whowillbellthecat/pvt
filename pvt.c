@@ -159,12 +159,13 @@ static int
 stats_record(char *buf, const int len, const struct stats *s, const time_t *start_time)
 {
 	struct tm *t;
+	const char date_fmt[] = "%F %R %Z";
 	char date[25];
 
-	if (!localtime(start_time))
+	if (NULL == (t = localtime(start_time)))
 		return -1;
 
-	if (!strftime(date, sizeof(date), "%F %R %Z", t))
+	if (!strftime(date, sizeof(date), date_fmt, t))
 		return -1;
 
 	return snprintf(buf, len, "%s,%d,%d,%d,%d,%d,%d\n", date, s->testlen,
