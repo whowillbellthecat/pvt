@@ -98,15 +98,15 @@ check_react(const struct timespec *t)
 	nanosleep(t, NULL);
 	e.commission_err_count += handle_commission_errors();
 
-	bkgd(COLOR_PAIR(2));
-	clock_gettime(CLOCK_MONOTONIC, &ts1);
-	show_timer();
-	clock_gettime(CLOCK_MONOTONIC, &ts2);
-	bkgd(COLOR_PAIR(1));
+	(void)bkgd(COLOR_PAIR(2));
+	(void)clock_gettime(CLOCK_MONOTONIC, &ts1);
+	(void)show_timer();
+	(void)clock_gettime(CLOCK_MONOTONIC, &ts2);
+	(void)bkgd(COLOR_PAIR(1));
 
 	clear();
-	mvprintw(LINES/2, COLS/2 - 3,"Wait...");
-	refresh();
+	(void)mvprintw(LINES/2, COLS/2 - 3,"Wait...");
+	(void)refresh();
 	e.stimulus = ts1;
 	e.rt = ts2;
 	return e;
@@ -129,11 +129,11 @@ get_interval(int lower, int upper)
 static void
 print_stats(struct stats s)
 {
-	printw("Test length:                %d seconds\n", s.testlen);
-	printw("Errors of commission:       %d\n", s.commission_err_count);
-	printw("Lapses       (rt > %d ms): %d\n", s.lapse_threshold, s.lapses);
-	printw("False starts (rt < 100 ms): %d\n", s.false_starts);
-	printw("Total stimulus count:       %d\n", s.stimuli_count);
+	(void)printw("Test length:                %d seconds\n", s.testlen);
+	(void)printw("Errors of commission:       %d\n", s.commission_err_count);
+	(void)printw("Lapses       (rt > %d ms): %d\n", s.lapse_threshold, s.lapses);
+	(void)printw("False starts (rt < 100 ms): %d\n", s.false_starts);
+	(void)printw("Total stimulus count:       %d\n", s.stimuli_count);
 }
 
 static struct stats
@@ -264,12 +264,12 @@ main(int argc, char **argv)
 			err(1, NULL);
 	}
 
-	initscr();
-	start_color();
-	cbreak();
-	noecho();
-	init_pair(1, COLOR_WHITE, COLOR_BLACK);
-	init_pair(2, COLOR_GREEN, COLOR_BLACK);
+	(void)initscr();
+	(void)start_color();
+	(void)cbreak();
+	(void)noecho();
+	(void)init_pair(1, COLOR_WHITE, COLOR_BLACK);
+	(void)init_pair(2, COLOR_GREEN, COLOR_BLACK);
 
 #ifdef __OpenBSD__
 	if (unveil(NULL, NULL) != 0)
@@ -278,22 +278,22 @@ main(int argc, char **argv)
 		err(1, NULL);
 #endif
 
-	bkgd(1);
+	(void)bkgd(1);
 
-	clear();
-	mvprintw(LINES/2, COLS/2 - 3, "Wait...");
-	refresh();
+	(void)clear();
+	(void)mvprintw(LINES/2, COLS/2 - 3, "Wait...");
+	(void)refresh();
 
 	interval = get_interval(interval_lower, interval_upper);
 
-	clock_gettime(CLOCK_MONOTONIC, &start);
+	(void)clock_gettime(CLOCK_MONOTONIC, &start);
 	for(i = 0, cur = start; cur.tv_sec - start.tv_sec < testlen; clock_gettime(CLOCK_MONOTONIC, &cur))
 		events[i++]=check_react(&interval);
 
 	
-	clear();
+	(void)clear();
 	stats = populate_stats(events, EVENT_MAX, lapse_threshold, testlen);
-	print_stats(stats);
+	(void)print_stats(stats);
 
 	if (fd) {
 		if (is_empty(fd))
@@ -306,8 +306,8 @@ main(int argc, char **argv)
 			i < EVENT_MAX && (events[i].stimulus.tv_nsec || d); i++)
 			printw("rt: %d ms\n", (d*1000) + (events[i].rt.tv_nsec/1000000));
 
-	printw("Press any key to exit.\n");
-	refresh();
+	(void)printw("Press any key to exit.\n");
+	(void)refresh();
 	(void)getch();
-	endwin();
+	(void)endwin();
 }
