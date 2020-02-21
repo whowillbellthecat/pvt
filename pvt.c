@@ -42,8 +42,8 @@ static int	handle_commission_errors();
 static int	signum(const int);
 static int	is_empty(const int);
 static int	write_hdr(const int);
+static int	stats_record(char *, const int, const struct stats *, const time_t *);
 static void	print_stats(struct stats);
-static void	write_stats_to_file(int, const struct stats, const time_t *);
 static struct stats	populate_stats(struct event *, int, int, int);
 static struct event	check_react(const struct timespec *);
 static struct timespec	get_interval(int, int);
@@ -155,27 +155,21 @@ populate_stats(struct event *events, int size, int lapse_threshold, int testlen)
 	return s;
 }
 
-static void
-write_stats_to_file(int fd, const struct stats s, const time_t *start_time)
-{ 
+static int
+stats_record(char *buf, const int len, const struct stats *s, const time_t *start_time)
+{
 	struct tm *t;
-	size_t ret;
-	if (NULL == (t = localtime(start_time)))
-		err(1, "could not determine localtime");
-
-	char date_fmt[] = "%F %R %Z";
 	char date[25];
-	if (0 == (ret = strftime(date, sizeof(date), "%F %R %Z", t)))
-		err(1, "could not format date (probably a bug)");
-	
-	char record[128]; // bound settings and calculate this using those bounds
-	
-	ret = snprintf(record, 128, "%s,%d,%d,%d,%d,%d,%d\n", date, s.testlen,
-	    s.commission_err_count, s.lapses, s.lapse_threshold, s.false_starts,
-	    s.stimuli_count);
-	if (0 == ret || 128 <= ret)
-		err(1, "stats record too large (probably a bug)");
-	write(fd, record, ret);
+
+	if (!localtime(start_time))
+		return -1;
+
+	if (!strftime(date, sizeof(date), "%F %R %Z", t))
+		return -1;
+
+	return snprintf(buf, len, "%s,%d,%d,%d,%d,%d,%d\n", date, s->testlen,
+	    s->commission_err_count, s->lapses, s->lapse_threshold, s->false_starts,
+	    s->stimuli_count);
 }
 
 static int
@@ -209,7 +203,7 @@ is_empty(const int fd)
 int
 main(int argc, char **argv)
 {
-	int	i, d, ch; 	/* temporary variables */
+	int	i, d, ch, ret; 	/* temporary variables */
 	int	verbose = 0;
 	int	fd = 0;
 	int	testlen 	= pvtb_testlen;
@@ -223,6 +217,7 @@ main(int argc, char **argv)
 	struct timeval	time_of_day;
 	const char	*emsg;
 
+	char	record[128];
 	char	*output_file = NULL;
 	char	*usage = "pvt [-vd] [-l lapse-threshold] [-d duration] [[file] ...]";
 
@@ -298,7 +293,11 @@ main(int argc, char **argv)
 	if (fd) {
 		if (is_empty(fd))
 			write_hdr(fd);
-		write_stats_to_file(fd, stats, &time_of_day.tv_sec);
+		ret = stats_record(record, sizeof(record), &stats, &time_of_day.tv_sec);
+		if (ret <= 0 || ret >= sizeof(record))
+			err(1, "error generating stats record");
+
+		write(fd, record, ret);
 	}
 
 	if (verbose)
