@@ -212,7 +212,7 @@ main(int argc, char **argv)
 	int	interval_lower	= pvtb_interval_lower;
 	int	interval_upper	= pvtb_interval_upper;
 
-	struct event	events[EVENT_MAX] = {0};
+	struct event	events[EVENT_MAX] = {};
 	struct stats	stats;
 	struct timespec	start, cur, interval;
 	struct timeval	time_of_day;
