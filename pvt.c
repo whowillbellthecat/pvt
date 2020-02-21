@@ -259,12 +259,15 @@ main(int argc, char **argv)
 			err(1, NULL);
 	}
 
-	(void)initscr();
-	(void)start_color();
-	(void)cbreak();
-	(void)noecho();
-	(void)init_pair(1, COLOR_WHITE, COLOR_BLACK);
-	(void)init_pair(2, COLOR_GREEN, COLOR_BLACK);
+	if (NULL == initscr())
+		err(1, "could not initialize ncurses");
+	ret = start_color();
+	ret |= cbreak();
+	ret |= noecho();
+	ret |= init_pair(1, COLOR_WHITE, COLOR_BLACK);
+	ret |= init_pair(2, COLOR_GREEN, COLOR_BLACK);
+	if (ERR & ret)
+		err(1, "ncurses initialization error");
 
 #ifdef __OpenBSD__
 	if (unveil(NULL, NULL) != 0)
