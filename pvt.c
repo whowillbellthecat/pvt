@@ -220,11 +220,13 @@ main(int argc, char **argv)
 
 	char	record[128];
 	char	*output_file = NULL;
-	char	*usage = "pvt [-vd] [-l lapse-threshold] [-d duration] [[file] ...]";
+	char	*usage = "pvt [-vd] [-l lapse-threshold] [-d duration] [-f file]";
 
 	srand(time(NULL));
 
-	while ((ch = getopt(argc, argv, "hvpd:l:")) != -1) {
+	output_file = getenv("PVT_FILE");
+
+	while ((ch = getopt(argc, argv, "hvpf:d:l:")) != -1) {
 		switch (ch) {
 		case 'v':
 			verbose++;
@@ -245,17 +247,20 @@ main(int argc, char **argv)
 			interval_lower	= pvt_interval_lower;
 			interval_upper	= pvt_interval_upper;
 			break;
+		case 'f':
+			output_file = optarg;
+			break;
 		default:
 			errx(1, "%s", usage);
 		}
 	}
-	argc -= optind;
-	argv += optind;
+	if (argc - optind)
+		errx(1, "%s", usage);
 
-	if (argc) {
-		fd = open(*argv, O_RDWR|O_APPEND|O_CREAT, S_IRUSR|S_IWUSR);
+	if (output_file) {
+		fd = open(output_file, O_RDWR|O_APPEND|O_CREAT, S_IRUSR|S_IWUSR);
 		if (fd < 0)
-			err(1, "%s", *argv);
+			err(1, "%s", output_file);
 		if (gettimeofday(&time_of_day, NULL) != 0)
 			err(1, NULL);
 	}
