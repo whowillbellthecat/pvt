@@ -301,12 +301,15 @@ main(int argc, char **argv)
 
 	if (fd) {
 		if (is_empty(fd))
-			write_hdr(fd);
+			if (write_hdr(fd) < ret)
+				err(1, "write_hdr");
+
 		ret = stats_record(record, sizeof(record), &stats, &time_of_day.tv_sec);
 		if (ret <= 0 || ret >= sizeof(record))
 			err(1, "error generating stats record");
 
-		write(fd, record, ret);
+		if (write(fd, record, ret) < ret)
+			err(1, "write");
 	}
 
 	if (verbose)
