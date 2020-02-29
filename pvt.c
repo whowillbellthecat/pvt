@@ -321,8 +321,7 @@ main(int argc, char **argv)
 	(void)print_stats(stats);
 
 	if (fd) {
-		if (is_empty(fd))
-			if (write_hdr(fd) < ret)
+		if (is_empty(fd) && write_hdr(fd) < ret)
 				err(1, "write_hdr");
 
 		ret = stats_record(record, sizeof(record), &stats, &time_of_day.tv_sec);
