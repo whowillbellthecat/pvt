@@ -1,4 +1,4 @@
-pvt is a simple implementation of a generalized form of the psychomotor vigilance test (PVT).
+pvt is a simple implementation of a generalized form of the psychomotor vigilance task (PVT).
 The PVT is a psychometric test used for measuring alertness and sustained attention, often to
 detect sleep debt. pvt runs in the terminal and has no dependencies other than ncurses.
 
