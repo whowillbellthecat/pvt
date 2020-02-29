@@ -44,9 +44,9 @@ Limitations:
 The pseudorandom interval between stimuli is an integer.
 
 The recorded response time is only an upper bound approximating the actual response time.
-	Scheuding latency and slow hardware/software may cause a significant difference between the two.
+	Scheduling latency and slow hardware/software may cause a significant difference between the two.
 
-There is no timeout when stimuli are presented (thus if you neglect to respond to any stimuli, until the test
+There is no timeout when stimuli are presented (thus if you neglect to respond to any stimuli until the test
 	ends, you will have a long response time, but only one 'lapse'). (TODO - find a way to address this)
 
 After the test finishes, no further stimuli are presented but the final stimulus will still record a
