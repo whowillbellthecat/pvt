@@ -120,9 +120,6 @@ get_interval(int lower, int upper)
 {
 	struct timespec t;
 
-	if (lower >= upper)
-		errx(1, "cannot choose interval between %d and %d", lower, upper);
-
 	t.tv_sec = lower + (rand()/(RAND_MAX/(upper-lower)));
 	t.tv_nsec = 0;
 
