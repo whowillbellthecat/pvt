@@ -205,7 +205,7 @@ is_empty(const int fd)
 int
 main(int argc, char **argv)
 {
-	int	i, d, ch, ret; 	/* temporary variables */
+	int	i, ch, ret; 	/* temporary variables */
 	int	fd = 0;
 	int	testlen 	= pvtb_testlen;
 	int	lapse_threshold = pvtb_lapse_threshold;
