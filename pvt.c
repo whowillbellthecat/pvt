@@ -24,7 +24,8 @@ struct stats {
 	int	commission_err_count;	/* Count of exteraneous key presses */
 	int	lapses;			/* Count of response times greater than lapse_threshold */
 	int	lapse_threshold;	/* Time in milliseconds before responses considered lapses */
-	int	false_starts;		/* Count of responses faster than 100ms */
+	int	false_starts;		/* Count of responses faster than fs_threshold */
+	int	fs_threshold;		/* False start threshold */
 	int	stimuli_count;		/* Total count of stimuli shown */
 };
 
@@ -32,10 +33,12 @@ const int	pvtb_lapse_threshold = 355;	/* PVT-B lapse threshold (in milliseconds)
 const int	pvtb_testlen = 3*60;		/* PVT-B test length (in seconds) */
 const int	pvtb_interval_lower = 1;	/* PVT-B stimulus interval lower bound (in seconds) */
 const int	pvtb_interval_upper = 4;	/* PVT-B stimulus interval upper bound (in seconds) */
+const int	pvtb_fs_threshold = 100;	/* PVT-B false start threshold (in milliseconds) */
 const int	pvt_lapse_threshold = 500;	/* PVT lapse threshold (in milliseconds) */
 const int	pvt_testlen = 10*60;		/* PVT test length (in seconds) */
 const int	pvt_interval_lower = 2;		/* PVT stimulus interval lower bound (in seconds) */
 const int	pvt_interval_upper = 10;	/* PVT stimulus interval upper bound (in seconds) */
+const int	pvt_fs_threshold = 100;		/* PVT false start threshold (in milliseconds) */
 
 static long	show_timer();
 static int	handle_commission_errors();
@@ -44,7 +47,7 @@ static int	is_empty(const int);
 static int	write_hdr(const int);
 static int	stats_record(char *, const int, const struct stats *, const time_t *);
 static void	print_stats(struct stats);
-static struct stats	populate_stats(struct event *, int, int, int);
+static struct stats	populate_stats(struct event *, int, int, int, int);
 static struct event	check_react(const struct timespec *);
 static struct timespec	get_interval(int, int);
 
@@ -132,12 +135,12 @@ print_stats(struct stats s)
 	(void)printw("Test length:                %d seconds\n", s.testlen);
 	(void)printw("Errors of commission:       %d\n", s.commission_err_count);
 	(void)printw("Lapses       (rt > %d ms): %d\n", s.lapse_threshold, s.lapses);
-	(void)printw("False starts (rt < 100 ms): %d\n", s.false_starts);
+	(void)printw("False starts (rt < %d ms): %d\n", s.false_starts, s.fs_threshold);
 	(void)printw("Total stimulus count:       %d\n", s.stimuli_count);
 }
 
 static struct stats
-populate_stats(struct event *events, int size, int lapse_threshold, int testlen)
+populate_stats(struct event *events, int size, int lapse_threshold, int fs_threshold, int testlen)
 {
 	int i, d;
 	struct stats s;
@@ -151,6 +154,7 @@ populate_stats(struct event *events, int size, int lapse_threshold, int testlen)
 	}
 	s.stimuli_count = i;
 	s.lapse_threshold = lapse_threshold;
+	s.fs_threshold = fs_threshold;
 	s.testlen = testlen;
 	return s;
 }
@@ -168,16 +172,16 @@ stats_record(char *buf, const int len, const struct stats *s, const time_t *star
 	if (!strftime(date, sizeof(date), date_fmt, t))
 		return -1;
 
-	return snprintf(buf, len, "%s,%d,%d,%d,%d,%d,%d\n", date, s->testlen,
+	return snprintf(buf, len, "%s,%d,%d,%d,%d,%d,%d,%d\n", date, s->testlen,
 	    s->commission_err_count, s->lapses, s->lapse_threshold, s->false_starts,
-	    s->stimuli_count);
+	    s->fs_threshold, s->stimuli_count);
 }
 
 static int
 write_hdr(const int fd)
 {
-	const char hdr[] = "date,testlen,commission_err_count,"
-	"lapses,lapse_threshold,false_starts,stimuli_count\n";
+	const char hdr[] = "date,testlen,commission_err_count,lapses,"
+	    "lapse_threshold,false_starts,false_start_threshold,stimuli_count\n";
 
 	return write(fd, hdr, sizeof(hdr));
 }
@@ -209,6 +213,7 @@ main(int argc, char **argv)
 	int	fd = 0;
 	int	testlen 	= pvtb_testlen;
 	int	lapse_threshold = pvtb_lapse_threshold;
+	int	fs_threshold	= pvtb_fs_threshold;
 	int	interval_lower	= pvtb_interval_lower;
 	int	interval_upper	= pvtb_interval_upper;
 
@@ -220,13 +225,14 @@ main(int argc, char **argv)
 
 	char	record[128];
 	char	*output_file = NULL;
-	char	*usage = "pvt [-vd] [-l lapse-threshold] [-d duration] [-f file]";
+	char	*usage = "pvt [-vp] [-l lapse_threshold] [-d duration] [-n interval_min]"
+		    " [-m interval_max] [-f falsestart-threshold] [file]";
 
 	srand(time(NULL));
 
 	output_file = getenv("PVT_FILE");
 
-	while ((ch = getopt(argc, argv, "hvpf:d:l:")) != -1) {
+	while ((ch = getopt(argc, argv, "hvpn:m:f:d:l:")) != -1) {
 		switch (ch) {
 		case 'v':
 			verbose++;
@@ -234,12 +240,12 @@ main(int argc, char **argv)
 		case 'l':
 			lapse_threshold = strtonum(optarg, 1, 2048, &emsg);
 			if (emsg)
-				errx(1, "lapse threshold %s", emsg);
+				errx(1, "lapse threshold (l) %s", emsg);
 			break;
 		case 'd':
 			testlen = strtonum(optarg, 1, 2048, &emsg);
 			if (emsg)
-				errx(1, "test duration %s", emsg);
+				errx(1, "test duration (d) %s", emsg);
 			break;
 		case 'p': /* Take PVT instead of PVT-B */
 			testlen		= pvt_testlen;
@@ -248,14 +254,36 @@ main(int argc, char **argv)
 			interval_upper	= pvt_interval_upper;
 			break;
 		case 'f':
-			output_file = optarg;
+			fs_threshold = strtonum(optarg, 1, 2048, &emsg);
+			if(emsg)
+				errx(1, "false start threshold (f) %s", emsg);
+			break;
+		case 'n':
+			interval_lower = strtonum(optarg, 1, 2048, &emsg);
+			if(emsg)
+				errx(1, "lower interval (n) %s", emsg);
+			break;
+		case 'm':
+			interval_upper = strtonum(optarg, 1, 2048, &emsg);
+			if(emsg)
+				errx(1, "upper interval (m) %s", emsg);
 			break;
 		default:
 			errx(1, "%s", usage);
 		}
 	}
-	if (argc - optind)
+	argc -= optind;
+	argv += optind;
+
+	if (argc > 1)
 		errx(1, "%s", usage);
+	
+	if (argc)
+		output_file = *argv;
+
+	if (interval_lower > interval_upper)
+		errx(1, "lower interval (n) cannot be greater than upper interval (m)"); 
+
 
 	if (output_file) {
 		fd = open(output_file, O_RDWR|O_APPEND|O_CREAT, S_IRUSR|S_IWUSR);
@@ -296,7 +324,7 @@ main(int argc, char **argv)
 
 	
 	(void)clear();
-	stats = populate_stats(events, EVENT_MAX, lapse_threshold, testlen);
+	stats = populate_stats(events, EVENT_MAX, lapse_threshold, fs_threshold, testlen);
 	(void)print_stats(stats);
 
 	if (fd) {
