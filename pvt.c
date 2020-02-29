@@ -209,7 +209,6 @@ int
 main(int argc, char **argv)
 {
 	int	i, d, ch, ret; 	/* temporary variables */
-	int	verbose = 0;
 	int	fd = 0;
 	int	testlen 	= pvtb_testlen;
 	int	lapse_threshold = pvtb_lapse_threshold;
@@ -225,18 +224,15 @@ main(int argc, char **argv)
 
 	char	record[128];
 	char	*output_file = NULL;
-	char	*usage = "pvt [-vp] [-l lapse_threshold] [-d duration] [-n interval_min]"
+	char	*usage = "pvt [-p] [-l lapse_threshold] [-d duration] [-n interval_min]"
 		    " [-m interval_max] [-f falsestart-threshold] [file]";
 
 	srand(time(NULL));
 
 	output_file = getenv("PVT_FILE");
 
-	while ((ch = getopt(argc, argv, "hvpn:m:f:d:l:")) != -1) {
+	while ((ch = getopt(argc, argv, "hpn:m:f:d:l:")) != -1) {
 		switch (ch) {
-		case 'v':
-			verbose++;
-			break;
 		case 'l':
 			lapse_threshold = strtonum(optarg, 1, 2048, &emsg);
 			if (emsg)
@@ -339,11 +335,6 @@ main(int argc, char **argv)
 		if (write(fd, record, ret) < ret)
 			err(1, "write");
 	}
-
-	if (verbose)
-		for(i = 0; d = difftime(events[i].rt.tv_sec, events[i].stimulus.tv_sec),
-			i < EVENT_MAX && (events[i].stimulus.tv_nsec || d); i++)
-			printw("rt: %d ms\n", (d*1000) + (events[i].rt.tv_nsec/1000000));
 
 	(void)printw("Press any key to exit.\n");
 	(void)refresh();
