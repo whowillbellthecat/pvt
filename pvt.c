@@ -231,12 +231,12 @@ main(int argc, char **argv)
 		case 'n':
 			config.n = strtonum(optarg, 0, 2048, &emsg);
 			if(emsg)
-				errx(1, "lower interval (n) %s", emsg);
+				errx(1, "lower interval bounds (n) %s", emsg);
 			break;
 		case 'm':
 			config.m = strtonum(optarg, 1, 2048, &emsg);
 			if(emsg)
-				errx(1, "upper interval (m) %s", emsg);
+				errx(1, "upper interval bounds (m) %s", emsg);
 			break;
 		case 't':
 			config.t = strtonum(optarg, 1, INT_MAX, &emsg);
@@ -308,8 +308,8 @@ main(int argc, char **argv)
 	(void)clear();
 	stats = populate_stats(events, EVENT_MAX, &config);
 
-	(void)printw("Test Configuration: (%d, %d, %d, %d, %d, %d)\n\n", config.n, config.m, config.t,
-	    config.d, config.l, config.f);
+	(void)printw("Test Configuration: (%d, %d, %d, %d, %d, %d)\n\n",
+	    config.n, config.m, config.t, config.d, config.l, config.f);
 
 	(void)printw("Event count: %d\n", stats.stimuli_count);
 	(void)printw("Lapses: %d\n", stats.lapses);
