@@ -302,8 +302,11 @@ main(int argc, char **argv)
 	(void)clock_gettime(CLOCK_MONOTONIC, &start);
 
 	cur = start;
-	for(i = 0; cur.tv_sec - start.tv_sec < config.d; clock_gettime(CLOCK_MONOTONIC, &cur), i++)
+
+	for(i = 0; cur.tv_sec - start.tv_sec < config.d; i++) {
 		check_react(&events[i]);
+		clock_gettime(CLOCK_MONOTONIC, &cur);
+	}
 
 	(void)clear();
 	stats = populate_stats(events, EVENT_MAX, &config);
