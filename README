@@ -5,7 +5,7 @@ detect sleep debt. pvt runs in the terminal and has no dependencies other than n
 The implementation of pvt uses the following model.
 
 A PVT configuration is a tuple c of natural numbers (n, m, t, d, l, f) where
-  n and m are interstimulus bounds in seconds, n <= m <= 2048,
+  n and m are interstimulus bounds in seconds, n <= m,
   t is the stimulus timeout in milliseconds, t <= INT_MAX
   d is the test duration is seconds, m < d <= 2048,
   l is the lapse threshold in milliseconds, l < t,
