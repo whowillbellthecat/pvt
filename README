@@ -2,33 +2,35 @@ pvt is a simple implementation of a generalized form of the psychomotor vigilanc
 The PVT is a psychometric test used for measuring alertness and sustained attention, often to
 detect sleep debt. pvt runs in the terminal and has no dependencies other than ncurses.
 
-A generalized PVT can be considered as follows. Every n to m seconds a stimulus is presented
-for a total duration of d seconds. When a testee responds (with pvt, by pressing <enter>),
-the response time, r, is recorded (in milliseconds). Given a lapse threshold l (in milliseconds)
-and a false start threshold f (in milliseconds), the score is the count of responses satisfying
-f_i < r_i < l_i.
+The implementation of pvt uses the following model.
 
+A PVT configuration is a tuple c of natural numbers (n, m, t, d, l, f) where
+  n and m are interstimulus bounds in seconds, n <= m <= 2048,
+  t is the stimulus timeout in milliseconds, t <= INT_MAX
+  d is the test duration is seconds, m < d <= 2048,
+  l is the lapse threshold in milliseconds, l < t,
+  f is the false start threshold in milliseconds, f < l - 1.
 
-By default, pvt uses the PVT-B, with the following configuration:
-n = 1
-m = 4
-d = 3*60
-l = 355
-f = 100
+A PVT test is a set of k>0 events generated under configuration c.
+An event is a tuple (i_k, s_k), where
+  i_k is a random interstimulus interval, n <= i_k <= m,
+  s_k is the duration a stimulus is shown, 0 <= s_k <= t.
 
-A more typical PVT configuration (which can be used with the -p flag) is:
-n = 2
-m = 10
-d = 10*60
-l = 500
-f = 100
+A stimulus is shown until either a key (enter) is pressed, or t seconds elapse.
+The goal of the testee is to maximize the count of events where f < s_k < l.
+
+Key presses besides enter, or which are pressed when stimulus is not shown are
+counted as errors.
+
+By default, pvt uses the PVT-B, with the configuration (1, 4, 30, 3*60, 355, 100).
+
+A more typical PVT configuration (which can be used with -p) is (2, 10, 30, 10*60, 500, 100).
 
 These values can be changed with the matching flag (e.g., set the lapse threshold with `pvt -l 500`).
 
 If PVT_FILE is set, the results will be stored in it as records delinated by newlines
-and fields delineated by commas. (i.e, a subset of CSV guaranteed to be parsable by cut(1)).
-If a file is specified on the command line, it will override PVT_FILE. If an empty string is
-provided as an argument, no file will be used. Note that the file format is not considered stable.
+and fields delineated by pipe characters.  If a file is specified on the command line,
+it will override PVT_FILE. If an empty string is provided as an argument, no file will be used.
 
 pvt is written with portablity in mind but only tested on OpenBSD. Deviations from posix limiting
 portability should be regarded as bugs.
@@ -37,17 +39,12 @@ pvt can be built by running make (any make should work). A C compiler and ncurse
 build.  There is an install target but it defaults to "/usr/local/bin/". To change it set BIN (e.g.,
 `make && make install BIN=/usr/bin/`).
 
-Code style is loosely based on OpenBSD's style guide (see style(9)).
-
 Limitations:
 
-The pseudorandom interval between stimuli is an integer.
+The response time immediately when responding to a stimulus. This may reduce time pressure.
 
 The recorded response time is only an upper bound approximating the actual response time.
 	Scheduling latency and slow hardware/software may cause a significant difference between the two.
-
-There is no timeout when stimuli are presented (thus if you neglect to respond to any stimuli until the test
-	ends, you will have a long response time, but only one 'lapse'). (TODO - find a way to address this)
 
 After the test finishes, no further stimuli are presented but the final stimulus will still record a
 	response (i.e, the final response time may be after the end of the test).
@@ -57,5 +54,3 @@ There is no man page. (TODO)
 There are no tests. (TODO)
 
 There is no way to export latencies for further analysis. (TODO)
-
-Key presses other than enter are treated as valid responses instead of counted as errors. (TODO)

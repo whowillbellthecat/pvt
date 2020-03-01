@@ -3,6 +3,7 @@
 #include <curses.h>
 #include <err.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <poll.h>
 // #include <stdio.h> /* included by curses.h */
 #include <term.h>
@@ -14,53 +15,54 @@
 #define EVENT_MAX 2048
 
 struct event {
-	struct	timespec stimulus;
-	struct	timespec rt;
-	int	commission_err_count;
+	int	i; /* interstimulus interval */
+	int	s; /* duration stimulus shown */
+	int	e; /* count of unhandled keypresses */
 };
 
 struct stats {
-	int	testlen;		/* Length of test in seconds */
-	int	commission_err_count;	/* Count of exteraneous key presses */
-	int	lapses;			/* Count of response times greater than lapse_threshold */
-	int	lapse_threshold;	/* Time in milliseconds before responses considered lapses */
-	int	false_starts;		/* Count of responses faster than fs_threshold */
-	int	fs_threshold;		/* False start threshold */
-	int	stimuli_count;		/* Total count of stimuli shown */
+	int	errors;		/* Count of exteraneous key presses */
+	int	lapses;		/* Count of response times greater than lapse_threshold */
+	int	false_starts;	/* Count of responses faster than fs_threshold */
+	int	stimuli_count;	/* Total count of stimuli shown */
 };
 
-const int	pvtb_lapse_threshold = 355;	/* PVT-B lapse threshold (in milliseconds) */
-const int	pvtb_testlen = 3*60;		/* PVT-B test length (in seconds) */
-const int	pvtb_interval_lower = 1;	/* PVT-B stimulus interval lower bound (in seconds) */
-const int	pvtb_interval_upper = 4;	/* PVT-B stimulus interval upper bound (in seconds) */
-const int	pvtb_fs_threshold = 100;	/* PVT-B false start threshold (in milliseconds) */
-const int	pvt_lapse_threshold = 500;	/* PVT lapse threshold (in milliseconds) */
-const int	pvt_testlen = 10*60;		/* PVT test length (in seconds) */
-const int	pvt_interval_lower = 2;		/* PVT stimulus interval lower bound (in seconds) */
-const int	pvt_interval_upper = 10;	/* PVT stimulus interval upper bound (in seconds) */
-const int	pvt_fs_threshold = 100;		/* PVT false start threshold (in milliseconds) */
+struct configuration {
+	int	n;	/* lower interval */
+	int	m;	/* upper interval */
+	int	t;	/* stimulus timeout */
+	int	d;	/* test duration */
+	int	l;	/* lapse threshold */
+	int	f;	/* false start threshold */
+};
+
+static const struct configuration pvtb	= { 1, 4, 30*1000, 3*60, 355, 100 };
+static const struct configuration pvt	= { 2, 10, 30*1000, 10*60, 500, 100 };
 
 static long	show_timer();
 static int	handle_commission_errors();
 static int	signum(const int);
 static int	is_empty(const int);
 static int	write_hdr(const int);
-static int	stats_record(char *, const int, const struct stats *, const time_t *);
-static void	print_stats(struct stats);
-static struct stats	populate_stats(struct event *, int, int, int, int);
-static struct event	check_react(const struct timespec *);
-static struct timespec	get_interval(int, int);
+static int	get_interval(int, int);
+static void	check_react(struct event *);
+static int	stats_record(char *, const int, const struct stats *,
+		    const struct configuration *, const time_t *);
+
+static struct stats	populate_stats(struct event *, int, const struct configuration *);
 
 static long
 show_timer()
 {
-	int ready = 0, delta = 0;
+	int ready = 0, delta = 0, errors = 0;
 	struct pollfd pfd[1];
 	pfd[0].fd = STDIN_FILENO;
 	pfd[0].events = POLLIN;
 	struct timespec t = {0, 1000000};
 
-	while(!ready) {
+	while(!ready || (ready >= 0 && pfd[0].revents & POLLIN && getch() != '\n')) {
+		if (ready)
+			errors++;
 		clear(); mvprintw(LINES/2, COLS/2, "%d", delta); refresh();
 		ready = poll(pfd, 1, 0);
 		nanosleep(&t, NULL);
@@ -69,9 +71,7 @@ show_timer()
 
 	if(ready < 0)
 		exit(EXIT_FAILURE);
-	if(pfd[0].revents & POLLIN && getch() == '\n')
-		return 1;
-	return 0;
+	return errors;
 }
 
 static int
@@ -93,71 +93,57 @@ handle_commission_errors()
 }
 			
 
-static struct event
-check_react(const struct timespec *t)
+static void
+check_react(struct event *e)
 {
-	struct timespec ts1, ts2;
-	struct event e;
-	nanosleep(t, NULL);
-	e.commission_err_count += handle_commission_errors();
+	struct timespec t, ts1, ts2;
+	int d;
+	t.tv_sec = e->i;
+	t.tv_nsec = 0;
+	nanosleep(&t, NULL);
+	e->e += handle_commission_errors();
 
 	(void)bkgd(COLOR_PAIR(2));
 	(void)clock_gettime(CLOCK_MONOTONIC, &ts1);
-	(void)show_timer();
+	e->e += show_timer();
 	(void)clock_gettime(CLOCK_MONOTONIC, &ts2);
 	(void)bkgd(COLOR_PAIR(1));
 
 	clear();
 	(void)mvprintw(LINES/2, COLS/2 - 3,"Wait...");
 	(void)refresh();
-	e.stimulus = ts1;
-	e.rt = ts2;
-	return e;
+
+	d = difftime(ts2.tv_sec, ts1.tv_sec);
+	e->s = (d * 1000) + ((ts2.tv_nsec - ts1.tv_nsec)/1000000);
 }
 
-static struct timespec
-get_interval(int lower, int upper)
+static int
+get_interval(int n, int m)
 {
-	struct timespec t;
-
-	t.tv_sec = lower + (rand()/(RAND_MAX/(upper-lower)));
-	t.tv_nsec = 0;
-
-	return t;
-}
-
-static void
-print_stats(struct stats s)
-{
-	(void)printw("Test length:                %d seconds\n", s.testlen);
-	(void)printw("Errors of commission:       %d\n", s.commission_err_count);
-	(void)printw("Lapses       (rt > %d ms): %d\n", s.lapse_threshold, s.lapses);
-	(void)printw("False starts (rt < %d ms): %d\n", s.false_starts, s.fs_threshold);
-	(void)printw("Total stimulus count:       %d\n", s.stimuli_count);
+	if (n == m)
+		return n;
+	return n + (rand()/(RAND_MAX/(m - n)));
 }
 
 static struct stats
-populate_stats(struct event *events, int size, int lapse_threshold, int fs_threshold, int testlen)
+populate_stats(struct event *events, int size, const struct configuration *config)
 {
-	int i, d;
-	struct stats s;
-	for (i=0; i < EVENT_MAX && events[i].stimulus.tv_nsec != 0; i++) {
-		d = difftime(events[i].rt.tv_sec, events[i].stimulus.tv_sec);
-		if (events[i].rt.tv_nsec/1000000 >= lapse_threshold || d)
+	int i;
+	struct stats s = {};
+	for (i=0; i < EVENT_MAX && events[i].s != 0; i++) {
+		if (events[i].s >= config->l)
 			s.lapses++;
-		if (events[i].rt.tv_nsec/1000000 <= 100 && 0 == d)
+		if (events[i].s <= config->f)
 			s.false_starts++;
-		s.commission_err_count += events[i].commission_err_count;
+		s.errors += events[i].e;
 	}
 	s.stimuli_count = i;
-	s.lapse_threshold = lapse_threshold;
-	s.fs_threshold = fs_threshold;
-	s.testlen = testlen;
 	return s;
 }
 
 static int
-stats_record(char *buf, const int len, const struct stats *s, const time_t *start_time)
+stats_record(char *buf, const int len, const struct stats *s,
+    const struct configuration *config, const time_t *start_time)
 {
 	struct tm *t;
 	const char date_fmt[] = "%F %R %Z";
@@ -169,17 +155,15 @@ stats_record(char *buf, const int len, const struct stats *s, const time_t *star
 	if (!strftime(date, sizeof(date), date_fmt, t))
 		return -1;
 
-	return snprintf(buf, len, "%s,%d,%d,%d,%d,%d,%d,%d\n", date, s->testlen,
-	    s->commission_err_count, s->lapses, s->lapse_threshold, s->false_starts,
-	    s->fs_threshold, s->stimuli_count);
+	return snprintf(buf, len, "%s|(%d,%d,%d,%d,%d,%d)|%d|%d|%d|%d\n", date,
+	    config->n, config->m, config->t, config->d, config->l, config->f,
+	    s->errors, s->lapses, s->false_starts, s->stimuli_count);
 }
 
 static int
 write_hdr(const int fd)
 {
-	const char hdr[] = "date,testlen,commission_err_count,lapses,"
-	    "lapse_threshold,false_starts,false_start_threshold,stimuli_count\n";
-
+	const char hdr[] = "date|config|errors|lapses|false_starts|events\n";
 	return write(fd, hdr, sizeof(hdr));
 }
 
@@ -207,59 +191,57 @@ main(int argc, char **argv)
 {
 	int	i, ch, ret; 	/* temporary variables */
 	int	fd = 0;
-	int	testlen 	= pvtb_testlen;
-	int	lapse_threshold = pvtb_lapse_threshold;
-	int	fs_threshold	= pvtb_fs_threshold;
-	int	interval_lower	= pvtb_interval_lower;
-	int	interval_upper	= pvtb_interval_upper;
+	struct configuration config = pvtb;
 
 	struct event	events[EVENT_MAX] = {};
 	struct stats	stats;
-	struct timespec	start, cur, interval;
+	struct timespec	start, cur;
 	struct timeval	time_of_day;
 	const char	*emsg;
 
 	char	record[128];
 	char	*output_file = NULL;
 	char	*usage = "pvt [-p] [-l lapse_threshold] [-d duration] [-n interval_min]"
-		    " [-m interval_max] [-f falsestart-threshold] [file]";
+		    " [-m interval_max] [-f falsestart_threshold] [file]";
 
 	srand(time(NULL));
 
 	output_file = getenv("PVT_FILE");
 
-	while ((ch = getopt(argc, argv, "hpn:m:f:d:l:")) != -1) {
+	while ((ch = getopt(argc, argv, "hpt:n:m:f:d:l:")) != -1) {
 		switch (ch) {
 		case 'l':
-			lapse_threshold = strtonum(optarg, 1, 2048, &emsg);
+			config.l = strtonum(optarg, 1, 2048, &emsg);
 			if (emsg)
 				errx(1, "lapse threshold (l) %s", emsg);
 			break;
 		case 'd':
-			testlen = strtonum(optarg, 1, 2048, &emsg);
+			config.d = strtonum(optarg, 1, 2048, &emsg);
 			if (emsg)
 				errx(1, "test duration (d) %s", emsg);
 			break;
-		case 'p': /* Take PVT instead of PVT-B */
-			testlen		= pvt_testlen;
-			lapse_threshold	= pvt_lapse_threshold;
-			interval_lower	= pvt_interval_lower;
-			interval_upper	= pvt_interval_upper;
+		case 'p':
+			config = pvt;
 			break;
 		case 'f':
-			fs_threshold = strtonum(optarg, 1, 2048, &emsg);
+			config.f = strtonum(optarg, 0, 2048, &emsg);
 			if(emsg)
 				errx(1, "false start threshold (f) %s", emsg);
 			break;
 		case 'n':
-			interval_lower = strtonum(optarg, 1, 2048, &emsg);
+			config.n = strtonum(optarg, 0, 2048, &emsg);
 			if(emsg)
 				errx(1, "lower interval (n) %s", emsg);
 			break;
 		case 'm':
-			interval_upper = strtonum(optarg, 1, 2048, &emsg);
+			config.m = strtonum(optarg, 1, 2048, &emsg);
 			if(emsg)
 				errx(1, "upper interval (m) %s", emsg);
+			break;
+		case 't':
+			config.t = strtonum(optarg, 1, INT_MAX, &emsg);
+			if(emsg)
+				errx(1, "stimulus timeout (t) %s", emsg);
 			break;
 		default:
 			errx(1, "%s", usage);
@@ -274,9 +256,14 @@ main(int argc, char **argv)
 	if (argc)
 		output_file = *argv;
 
-	if (interval_lower > interval_upper)
-		errx(1, "lower interval (n) cannot be greater than upper interval (m)"); 
-
+	if (config.n > config.m)
+		errx(1, "constraint n <= m fails");
+	if (config.m >= config.d)
+		errx(1, "constraint m < d fails");
+	if (config.l >= config.t)
+		errx(1, "constraint l < t fails");
+	if (config.f >= config.l - 1)
+		errx(1, "constraint f < l - 1 fails");
 
 	if (output_file) {
 		fd = open(output_file, O_RDWR|O_APPEND|O_CREAT, S_IRUSR|S_IWUSR);
@@ -309,22 +296,31 @@ main(int argc, char **argv)
 	(void)mvprintw(LINES/2, COLS/2 - 3, "Wait...");
 	(void)refresh();
 
-	interval = get_interval(interval_lower, interval_upper);
+	for (i = 0; i < EVENT_MAX; i++)
+		events[i].i = get_interval(config.n, config.m);
 
 	(void)clock_gettime(CLOCK_MONOTONIC, &start);
-	for(i = 0, cur = start; cur.tv_sec - start.tv_sec < testlen; clock_gettime(CLOCK_MONOTONIC, &cur))
-		events[i++]=check_react(&interval);
 
-	
+	cur = start;
+	for(i = 0; cur.tv_sec - start.tv_sec < config.d; clock_gettime(CLOCK_MONOTONIC, &cur), i++)
+		check_react(&events[i]);
+
 	(void)clear();
-	stats = populate_stats(events, EVENT_MAX, lapse_threshold, fs_threshold, testlen);
-	(void)print_stats(stats);
+	stats = populate_stats(events, EVENT_MAX, &config);
+
+	(void)printw("Test Configuration: (%d, %d, %d, %d, %d, %d)\n\n", config.n, config.m, config.t,
+	    config.d, config.l, config.f);
+
+	(void)printw("Event count: %d\n", stats.stimuli_count);
+	(void)printw("Lapses: %d\n", stats.lapses);
+	(void)printw("False starts: %d\n", stats.false_starts);
+	(void)printw("Extraneous keypresses: %d\n\n", stats.errors);
 
 	if (fd) {
 		if (is_empty(fd) && write_hdr(fd) < ret)
 				err(1, "write_hdr");
 
-		ret = stats_record(record, sizeof(record), &stats, &time_of_day.tv_sec);
+		ret = stats_record(record, sizeof(record), &stats, &config, &time_of_day.tv_sec);
 		if (ret <= 0 || ret >= sizeof(record))
 			err(1, "error generating stats record");
 
