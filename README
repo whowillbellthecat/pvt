@@ -12,9 +12,9 @@ A PVT configuration is a tuple c of natural numbers (n, m, t, d, l, f) where
   f is the false start threshold in milliseconds, f < l - 1.
 
 A PVT test is a set of k>0 events generated under configuration c.
-An event is a tuple (i_k, s_k), where
-  i_k is a random interstimulus interval, n <= i_k <= m,
-  s_k is the duration a stimulus is shown, 0 <= s_k <= t.
+An event is a tuple (i, s), where
+  i is a random interstimulus interval, n <= i <= m,
+  s is the duration a stimulus is shown, 0 <= s <= t.
 
 A stimulus is shown until either a key (enter) is pressed, or t seconds elapse.
 The goal of the testee is to maximize the count of events where f < s_k < l.
