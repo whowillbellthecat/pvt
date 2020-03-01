@@ -28,11 +28,11 @@ A more typical PVT configuration (which can be used with -p) is (2, 10, 30*1000,
 
 These values can be changed with the matching flag (e.g., set the lapse threshold with `pvt -l 500`).
 
-If PVT_FILE is set, the results will be stored in it as records delinated by newlines
+If PVT_FILE is set, the results will be stored in it as records delineated by newlines
 and fields delineated by pipe characters.  If a file is specified on the command line,
 it will override PVT_FILE. If an empty string is provided as an argument, no file will be used.
 
-pvt is written with portablity in mind but only tested on OpenBSD. Deviations from posix limiting
+pvt is written with portability in mind but only tested on OpenBSD. Deviations from posix limiting
 portability should be regarded as bugs.
 
 pvt can be built by running make (any make should work). A C compiler and ncurses are required to
@@ -41,7 +41,7 @@ build.  There is an install target but it defaults to "/usr/local/bin/". To chan
 
 Limitations:
 
-The response time immediately when responding to a stimulus. This may reduce time pressure.
+The response time is not shown immediately after responding to a stimulus. This may reduce time pressure.
 
 The recorded response time is only an upper bound approximating the actual response time.
 	Scheduling latency and slow hardware/software may cause a significant difference between the two.
