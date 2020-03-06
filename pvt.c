@@ -164,7 +164,7 @@ static int
 write_hdr(const int fd)
 {
 	const char hdr[] = "date|config|errors|lapses|false_starts|events\n";
-	return write(fd, hdr, sizeof(hdr));
+	return write(fd, hdr, sizeof(hdr)-1);
 }
 
 static int
