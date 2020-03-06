@@ -211,12 +211,12 @@ main(int argc, char **argv)
 	while ((ch = getopt(argc, argv, "hpt:n:m:f:d:l:")) != -1) {
 		switch (ch) {
 		case 'l':
-			config.l = strtonum(optarg, 1, 2048, &emsg);
+			config.l = strtonum(optarg, 0, 2048, &emsg);
 			if (emsg)
 				errx(1, "lapse threshold (l) %s", emsg);
 			break;
 		case 'd':
-			config.d = strtonum(optarg, 1, 2048, &emsg);
+			config.d = strtonum(optarg, 0, 2048, &emsg);
 			if (emsg)
 				errx(1, "test duration (d) %s", emsg);
 			break;
@@ -234,12 +234,12 @@ main(int argc, char **argv)
 				errx(1, "lower interval bounds (n) %s", emsg);
 			break;
 		case 'm':
-			config.m = strtonum(optarg, 1, 2048, &emsg);
+			config.m = strtonum(optarg, 0, 2048, &emsg);
 			if(emsg)
 				errx(1, "upper interval bounds (m) %s", emsg);
 			break;
 		case 't':
-			config.t = strtonum(optarg, 1, INT_MAX, &emsg);
+			config.t = strtonum(optarg, 0, INT_MAX, &emsg);
 			if(emsg)
 				errx(1, "stimulus timeout (t) %s", emsg);
 			break;
