@@ -63,7 +63,7 @@ show_timer()
 	while(!ready || (ready >= 0 && pfd[0].revents & POLLIN && getch() != '\n')) {
 		if (ready)
 			errors++;
-		clear(); mvprintw(LINES/2, COLS/2, "%d", delta); refresh();
+		erase(); mvprintw(LINES/2, COLS/2, "%d", delta); refresh();
 		ready = poll(pfd, 1, 0);
 		nanosleep(&t, NULL);
 		delta+=10;
