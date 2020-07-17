@@ -11,6 +11,7 @@
 #include <time.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 #define EVENT_MAX 2048
