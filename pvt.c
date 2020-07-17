@@ -2,6 +2,7 @@
 
 #include <curses.h>
 #include <err.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <poll.h>
@@ -39,6 +40,7 @@ struct configuration {
 static const struct configuration pvtb	= { 1, 4, 30*1000, 3*60, 355, 100 };
 static const struct configuration pvt	= { 2, 10, 30*1000, 10*60, 500, 100 };
 
+static long	parse_number(const char *, const long, const long, const char *);
 static long	show_timer();
 static int	handle_commission_errors();
 static int	signum(const int);
@@ -186,6 +188,19 @@ is_empty(const int fd)
 
 }
 
+static long
+parse_number(const char *s, const long n, const long m, const char *type)
+{
+	errno = 0;
+	char *e;
+	long p = strtol(s, &e, 10);
+	if(s[0] == '\0' || *e != '\0')
+		errx(1, "constraint (%s : numeric) failed", type);
+	if(p<n || p>m || (errno == ERANGE && (p == LONG_MAX || p == LONG_MIN)))
+		errx(1,"constraint %ld <= %s <= %ld failed", n, type, m);
+	return p;
+}
+
 int
 main(int argc, char **argv)
 {
@@ -197,7 +212,6 @@ main(int argc, char **argv)
 	struct stats	stats;
 	struct timespec	start, cur;
 	struct timeval	time_of_day;
-	const char	*emsg;
 
 	char	record[128];
 	char	*output_file = NULL;
@@ -211,37 +225,25 @@ main(int argc, char **argv)
 	while ((ch = getopt(argc, argv, "hpt:n:m:f:d:l:")) != -1) {
 		switch (ch) {
 		case 'l':
-			config.l = strtonum(optarg, 0, 2048, &emsg);
-			if (emsg)
-				errx(1, "lapse threshold (l) %s", emsg);
+			config.l = parse_number(optarg, 0, 2048, "l");
 			break;
 		case 'd':
-			config.d = strtonum(optarg, 0, 2048, &emsg);
-			if (emsg)
-				errx(1, "test duration (d) %s", emsg);
+			config.d = parse_number(optarg, 0, 2048, "d");
 			break;
 		case 'p':
 			config = pvt;
 			break;
 		case 'f':
-			config.f = strtonum(optarg, 0, 2048, &emsg);
-			if(emsg)
-				errx(1, "false start threshold (f) %s", emsg);
+			config.f = parse_number(optarg, 0, 2048, "f");
 			break;
 		case 'n':
-			config.n = strtonum(optarg, 0, 2048, &emsg);
-			if(emsg)
-				errx(1, "lower interval bounds (n) %s", emsg);
+			config.n = parse_number(optarg, 0, 2048, "n");
 			break;
 		case 'm':
-			config.m = strtonum(optarg, 0, 2048, &emsg);
-			if(emsg)
-				errx(1, "upper interval bounds (m) %s", emsg);
+			config.m = parse_number(optarg, 0, 2048, "m");
 			break;
 		case 't':
-			config.t = strtonum(optarg, 0, INT_MAX, &emsg);
-			if(emsg)
-				errx(1, "stimulus timeout (t) %s", emsg);
+			config.t = parse_number(optarg, 0, INT_MAX, "t");
 			break;
 		default:
 			errx(1, "%s", usage);
@@ -257,13 +259,13 @@ main(int argc, char **argv)
 		output_file = *argv;
 
 	if (config.n > config.m)
-		errx(1, "constraint n <= m fails");
+		errx(1, "constraint n <= m failed");
 	if (config.m >= config.d)
-		errx(1, "constraint m < d fails");
+		errx(1, "constraint m < d failed");
 	if (config.l >= config.t)
-		errx(1, "constraint l < t fails");
+		errx(1, "constraint l < t failed");
 	if (config.f >= config.l - 1)
-		errx(1, "constraint f < l - 1 fails");
+		errx(1, "constraint f < l - 1 failed");
 
 	if (output_file) {
 		fd = open(output_file, O_RDWR|O_APPEND|O_CREAT, S_IRUSR|S_IWUSR);
